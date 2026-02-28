@@ -1,0 +1,503 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>中角國小課表查詢系統</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&family=Righteous&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --deep: #0a2744;
+    --ocean: #1a5f8a;
+    --sea: #2589bd;
+    --wave: #4ab3e0;
+    --foam: #a8ddf0;
+    --sky: #ddf2fc;
+    --white: #f8fcff;
+    --sand: #fef9f0;
+    --gold: #f5b946;
+    --coral: #f07050;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Noto Sans TC', sans-serif;
+    background: var(--deep);
+    min-height: 100vh;
+    overflow-x: hidden;
+    position: relative;
+  }
+
+  /* Animated ocean background */
+  .ocean-bg {
+    position: fixed; inset: 0; z-index: 0;
+    background: linear-gradient(180deg, #0a1f3a 0%, #0e3560 40%, #1a5f8a 100%);
+    overflow: hidden;
+  }
+  .bubble {
+    position: absolute;
+    border-radius: 50%;
+    background: rgba(74,179,224,0.08);
+    animation: rise linear infinite;
+  }
+  @keyframes rise {
+    0% { transform: translateY(110vh) scale(0.5); opacity: 0; }
+    10% { opacity: 1; }
+    90% { opacity: 0.5; }
+    100% { transform: translateY(-10vh) scale(1.2); opacity: 0; }
+  }
+  .wave-strip {
+    position: absolute; bottom: 0; left: 0; right: 0; height: 120px;
+    background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1440 120'%3E%3Cpath fill='rgba(37,137,189,0.15)' d='M0,60 C360,120 720,0 1080,60 C1260,90 1380,40 1440,60 L1440,120 L0,120 Z'/%3E%3C/svg%3E") repeat-x;
+    animation: waveMove 8s linear infinite;
+  }
+  @keyframes waveMove { 0% { background-position: 0; } 100% { background-position: 1440px; } }
+
+  /* Layout */
+  .container {
+    position: relative; z-index: 1;
+    max-width: 900px; margin: 0 auto;
+    padding: 30px 16px 60px;
+  }
+
+  /* Header */
+  .header {
+    text-align: center; margin-bottom: 36px;
+    animation: fadeDown 0.7s ease both;
+  }
+  @keyframes fadeDown { from { opacity: 0; transform: translateY(-20px); } to { opacity: 1; transform: translateY(0); } }
+
+  .school-badge {
+    display: inline-flex; align-items: center; gap: 10px;
+    background: rgba(255,255,255,0.07);
+    border: 1px solid rgba(74,179,224,0.3);
+    border-radius: 50px;
+    padding: 6px 20px 6px 8px;
+    margin-bottom: 16px;
+    backdrop-filter: blur(8px);
+  }
+  .badge-icon {
+    width: 36px; height: 36px; border-radius: 50%;
+    background: linear-gradient(135deg, var(--wave), var(--sea));
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px;
+  }
+  .badge-text { color: var(--foam); font-size: 13px; font-weight: 500; letter-spacing: 1px; }
+
+  h1 {
+    font-size: clamp(24px, 5vw, 40px);
+    font-weight: 900;
+    color: var(--white);
+    letter-spacing: 2px;
+    line-height: 1.2;
+    text-shadow: 0 2px 20px rgba(74,179,224,0.4);
+  }
+  h1 span { color: var(--wave); }
+  .subtitle {
+    margin-top: 8px;
+    color: var(--foam);
+    font-size: 14px;
+    letter-spacing: 3px;
+    opacity: 0.7;
+  }
+
+  /* Query card */
+  .query-card {
+    background: rgba(255,255,255,0.06);
+    border: 1px solid rgba(74,179,224,0.25);
+    border-radius: 20px;
+    padding: 28px 24px;
+    backdrop-filter: blur(16px);
+    animation: fadeUp 0.7s 0.2s ease both;
+    margin-bottom: 28px;
+  }
+  @keyframes fadeUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+
+  .query-row {
+    display: flex; gap: 16px; flex-wrap: wrap; align-items: flex-end;
+  }
+  .field { flex: 1; min-width: 130px; }
+  label {
+    display: block;
+    color: var(--foam);
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    margin-bottom: 8px;
+  }
+  select {
+    width: 100%;
+    background: rgba(10,40,68,0.7);
+    border: 1.5px solid rgba(74,179,224,0.4);
+    border-radius: 12px;
+    color: var(--white);
+    font-family: 'Noto Sans TC', sans-serif;
+    font-size: 15px;
+    padding: 12px 16px;
+    cursor: pointer;
+    outline: none;
+    transition: border-color 0.2s, box-shadow 0.2s;
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8'%3E%3Cpath d='M0 0l6 8 6-8z' fill='%234ab3e0'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 14px center;
+  }
+  select:focus {
+    border-color: var(--wave);
+    box-shadow: 0 0 0 3px rgba(74,179,224,0.15);
+  }
+  select option { background: #0e3560; }
+
+  .btn-query {
+    flex: 0 0 auto;
+    background: linear-gradient(135deg, var(--wave) 0%, var(--sea) 100%);
+    color: white;
+    border: none;
+    border-radius: 12px;
+    padding: 13px 32px;
+    font-family: 'Noto Sans TC', sans-serif;
+    font-size: 16px;
+    font-weight: 700;
+    cursor: pointer;
+    letter-spacing: 2px;
+    transition: transform 0.15s, box-shadow 0.15s;
+    box-shadow: 0 4px 20px rgba(37,137,189,0.4);
+    white-space: nowrap;
+  }
+  .btn-query:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 28px rgba(37,137,189,0.5);
+  }
+  .btn-query:active { transform: translateY(0); }
+
+  /* Schedule */
+  .schedule-wrap {
+    animation: fadeUp 0.5s ease both;
+  }
+  .schedule-header {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 16px; flex-wrap: wrap; gap: 8px;
+  }
+  .schedule-title {
+    color: var(--white);
+    font-size: 18px; font-weight: 700;
+  }
+  .schedule-title span { color: var(--gold); }
+  .tag {
+    background: rgba(74,179,224,0.15);
+    border: 1px solid rgba(74,179,224,0.3);
+    color: var(--foam);
+    border-radius: 20px;
+    padding: 4px 14px;
+    font-size: 12px;
+    letter-spacing: 1px;
+  }
+
+  .table-wrap { overflow-x: auto; border-radius: 16px; }
+  table {
+    width: 100%; border-collapse: collapse;
+    min-width: 500px;
+  }
+  thead tr {
+    background: linear-gradient(90deg, var(--ocean), var(--sea));
+  }
+  thead th {
+    color: white; font-size: 13px; font-weight: 700;
+    padding: 13px 10px; text-align: center;
+    letter-spacing: 1px;
+  }
+  thead th:first-child { border-radius: 12px 0 0 0; }
+  thead th:last-child { border-radius: 0 12px 0 0; }
+
+  tbody tr { transition: background 0.15s; }
+  tbody tr:nth-child(odd)  { background: rgba(255,255,255,0.04); }
+  tbody tr:nth-child(even) { background: rgba(10,40,68,0.4); }
+  tbody tr:hover           { background: rgba(74,179,224,0.1); }
+
+  td {
+    padding: 11px 8px; text-align: center;
+    font-size: 14px; color: var(--white);
+    border-bottom: 1px solid rgba(74,179,224,0.08);
+  }
+  td:first-child {
+    color: var(--foam); font-weight: 700; font-size: 13px;
+    letter-spacing: 1px; white-space: nowrap;
+  }
+
+  .subject {
+    display: inline-block;
+    padding: 4px 10px;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 500;
+    white-space: nowrap;
+  }
+  .s-語   { background: rgba(74,179,224,0.2);  color: #a8ddf0; }
+  .s-閩   { background: rgba(56,189,193,0.2);  color: #99f6e4; }
+  .s-數   { background: rgba(37,137,189,0.22); color: #7ecfe8; }
+  .s-自   { background: rgba(72,187,120,0.2);  color: #9ae6b4; }
+  .s-社   { background: rgba(245,185,70,0.2);  color: #fcd97a; }
+  .s-藝   { background: rgba(240,112,80,0.2);  color: #f9b8a8; }
+  .s-體   { background: rgba(104,211,145,0.2); color: #b9f5d0; }
+  .s-英   { background: rgba(160,120,220,0.2); color: #d8b4fe; }
+  .s-音   { background: rgba(236,72,153,0.2);  color: #fbcfe8; }
+  .s-健   { background: rgba(52,211,153,0.2);  color: #a7f3d0; }
+  .s-彈   { background: rgba(255,255,255,0.08);color: #e2e8f0; }
+  .s-綜   { background: rgba(147,197,253,0.2); color: #bfdbfe; }
+  .s-校   { background: rgba(253,186,116,0.2); color: #fed7aa; }
+  .s-電   { background: rgba(99,102,241,0.22); color: #c7d2fe; }
+  .s-本   { background: rgba(251,191,36,0.2);  color: #fde68a; }
+  .s-中   { background: rgba(251,113,133,0.2); color: #fda4af; }
+  .s-魔   { background: rgba(167,139,250,0.2); color: #ddd6fe; }
+  .s-文   { background: rgba(196,181,253,0.2); color: #ede9fe; }
+
+  .empty { color: rgba(255,255,255,0.25); font-size: 12px; }
+  .cell-teacher { font-size: 11px; color: rgba(168,221,240,0.7); margin-top: 3px; }
+  .cell-room { font-size: 10px; color: rgba(245,185,70,0.7); margin-top: 2px; }
+
+  .period-chip {
+    display: inline-block;
+    width: 26px; height: 26px; line-height: 26px;
+    border-radius: 50%;
+    background: rgba(74,179,224,0.15);
+    border: 1px solid rgba(74,179,224,0.3);
+    font-size: 12px; color: var(--foam);
+    text-align: center; margin-right: 2px;
+  }
+
+  /* No result */
+  .no-result {
+    text-align: center; padding: 60px 20px;
+    color: rgba(255,255,255,0.4);
+  }
+  .no-result .icon { font-size: 48px; margin-bottom: 12px; }
+  .no-result p { font-size: 14px; }
+
+  /* Footer wave */
+  .footer { text-align: center; margin-top: 40px; color: rgba(255,255,255,0.25); font-size: 12px; }
+
+  @media (max-width: 480px) {
+    .query-row { flex-direction: column; }
+    .btn-query { width: 100%; }
+    .field { min-width: unset; }
+  }
+</style>
+</head>
+<body>
+
+<div class="ocean-bg" id="oceanBg">
+  <div class="wave-strip"></div>
+</div>
+
+<div class="container">
+  <header class="header">
+    <div class="school-badge">
+      <div class="badge-icon">🏫</div>
+      <span class="badge-text">ZHONGJIAO ELEMENTARY</span>
+    </div>
+    <h1>中角國小<span>課表</span>查詢系統</h1>
+    <p class="subtitle">CLASS SCHEDULE QUERY SYSTEM</p>
+  </header>
+
+  <div class="query-card">
+    <div class="query-row">
+      <div class="field">
+        <label>📚 年 級</label>
+        <select id="gradeSelect">
+          <option value="">請選擇年級</option>
+          <option value="1">一年級（甲班）</option>
+          <option value="2">二年級（甲班）</option>
+          <option value="3">三年級（甲班）</option>
+          <option value="4">四年級（甲班）</option>
+          <option value="5">五年級（甲班）</option>
+          <option value="6">六年級（甲班）</option>
+        </select>
+      </div>
+      <button class="btn-query" onclick="querySchedule()">🔍 查 詢</button>
+    </div>
+  </div>
+
+  <div id="result"></div>
+
+  <div class="footer">© 中角國小 ・ 課表查詢系統</div>
+</div>
+
+<script>
+// ── 真實課表資料 (114學年度第1學期) ─────────────────────────
+// 結構: scheduleData[年級][節次] = [週一, 週二, 週三, 週四, 週五]
+// 每個格子: { subject: 科目名, teacher: 老師, room: 教室(選填) }
+const scheduleData = {
+  "1": [
+    // 第1節
+    [{s:"生活音樂",t:"黃沁琳",r:"藝文教室"},{s:"閩南語文",t:"張淑吟"},{s:"本國語言",t:"葉孟倫"},{s:"本國語言",t:"葉孟倫"},{s:"英閱繪",t:"葉孟倫"}],
+    // 第2節
+    [{s:"本國語言",t:"葉孟倫"},{s:"本國語言",t:"葉孟倫"},{s:"體育",t:"陳育瑩"},{s:"本國語言",t:"葉孟倫"},{s:"本國語言",t:"葉孟倫"}],
+    // 第3節
+    [{s:"體育",t:"陳育瑩"},{s:"數學",t:"葉孟倫"},{s:"數學",t:"葉孟倫"},{s:"中角全能王",t:"徐筠軒"},{s:"校本生活",t:"謝書沛"}],
+    // 第4節
+    [{s:"數學",t:"葉孟倫"},{s:"健康",t:"簡翠芩"},{s:"英閱繪",t:"葉孟倫"},{s:"數學",t:"葉孟倫"},{s:"生活課程",t:"葉孟倫"}],
+    // 第5節
+    [{s:"生活課程",t:"葉孟倫"},{s:"─"},{s:"─"},{s:"─"},{s:"─"}],
+    // 第6節
+    [{s:"生活課程",t:"葉孟倫"},{s:"─"},{s:"─"},{s:"─"},{s:"─"}],
+    // 第7節
+    [{s:"生活課程",t:"葉孟倫"},{s:"─"},{s:"─"},{s:"─"},{s:"─"}],
+  ],
+  "2": [
+    [{s:"體育",t:"陳育瑩"},{s:"英閱繪",t:"葉孟倫"},{s:"數學",t:"張淑吟"},{s:"數學",t:"張淑吟"},{s:"數學",t:"張淑吟"}],
+    [{s:"生活音樂",t:"黃沁琳",r:"藝文教室"},{s:"本國語言",t:"張淑吟"},{s:"閩南語文",t:"張淑吟"},{s:"中角全能王",t:"徐筠軒"},{s:"本國語言",t:"張淑吟"}],
+    [{s:"數學",t:"張淑吟"},{s:"健康",t:"簡翠芩"},{s:"體育",t:"陳育瑩"},{s:"本國語言",t:"張淑吟"},{s:"英閱繪",t:"葉孟倫"}],
+    [{s:"本國語言",t:"張淑吟"},{s:"校本生活",t:"謝書沛"},{s:"本國語言",t:"張淑吟"},{s:"本國語言",t:"張淑吟"},{s:"生活課程",t:"張淑吟"}],
+    [{s:"生活課程",t:"張淑吟"},{s:"─"},{s:"─"},{s:"─"},{s:"─"}],
+    [{s:"生活課程",t:"張淑吟"},{s:"─"},{s:"─"},{s:"─"},{s:"─"}],
+    [{s:"生活課程",t:"張淑吟"},{s:"─"},{s:"─"},{s:"─"},{s:"─"}],
+  ],
+  "3": [
+    [{s:"綜合活動",t:"楊睿芸"},{s:"體育",t:"陳育瑩"},{s:"自然科學",t:"徐筠軒",r:"自然科教室"},{s:"體育",t:"陳育瑩"},{s:"藝術",t:"徐筠軒"}],
+    [{s:"校本綜合",t:"謝書沛"},{s:"本國語言",t:"楊睿芸"},{s:"數學",t:"楊睿芸"},{s:"英語",t:"楊睿芸"},{s:"藝術",t:"徐筠軒"}],
+    [{s:"音樂",t:"黃沁琳",r:"藝文教室"},{s:"新興科技",t:"高忠仁",r:"電腦教室"},{s:"本國語言",t:"楊睿芸"},{s:"英閱繪",t:"楊睿芸"},{s:"本國語言",t:"楊睿芸"}],
+    [{s:"數學",t:"楊睿芸"},{s:"社會",t:"楊睿芸"},{s:"閩南語文",t:"李鴻謀"},{s:"社會",t:"楊睿芸"},{s:"數學",t:"楊睿芸"}],
+    [{s:"自然科學",t:"徐筠軒",r:"自然科教室"},{s:"英閱繪",t:"楊睿芸"},{s:"─"},{s:"健康",t:"高忠仁"},{s:"─"}],
+    [{s:"自然科學",t:"徐筠軒",r:"自然科教室"},{s:"中角全能王",t:"謝書沛"},{s:"─"},{s:"本國語言",t:"楊睿芸"},{s:"─"}],
+    [{s:"本國語言",t:"楊睿芸"},{s:"社會",t:"楊睿芸"},{s:"─"},{s:"數學",t:"楊睿芸"},{s:"─"}],
+  ],
+  "4": [
+    [{s:"英閱繪",t:"葉孟倫"},{s:"自然科學",t:"徐筠軒",r:"自然科教室"},{s:"體育",t:"江紹禔"},{s:"本國語言",t:"林兪君"},{s:"本國語言",t:"林兪君"}],
+    [{s:"本國語言",t:"林兪君"},{s:"自然科學",t:"徐筠軒",r:"自然科教室"},{s:"本國語言",t:"林兪君"},{s:"數學",t:"林兪君"},{s:"校本綜合",t:"謝書沛"}],
+    [{s:"健康",t:"徐筠軒"},{s:"本國語言",t:"林兪君"},{s:"閩南語文",t:"李鴻謀"},{s:"英語",t:"葉孟倫"},{s:"自然科學",t:"徐筠軒",r:"自然科教室"}],
+    [{s:"音樂",t:"黃沁琳",r:"藝文教室"},{s:"英閱繪",t:"葉孟倫"},{s:"數學",t:"林兪君"},{s:"社會",t:"林兪君"},{s:"數學",t:"林兪君"}],
+    [{s:"社會",t:"林兪君"},{s:"─"},{s:"─"},{s:"藝術",t:"林兪君"},{s:"社會",t:"林兪君"}],
+    [{s:"體育",t:"江紹禔"},{s:"─"},{s:"─"},{s:"藝術",t:"林兪君"},{s:"新興科技",t:"高忠仁",r:"電腦教室"}],
+    [{s:"數學",t:"林兪君"},{s:"─"},{s:"─"},{s:"綜合活動",t:"林兪君"},{s:"中角全能王",t:"林兪君"}],
+  ],
+  "5": [
+    [{s:"自然科學",t:"徐筠軒",r:"自然科教室"},{s:"數學",t:"許育程"},{s:"數學",t:"許育程"},{s:"英閱繪",t:"李怡嫻"},{s:"體育",t:"黃文俊"}],
+    [{s:"自然科學",t:"徐筠軒",r:"自然科教室"},{s:"健康",t:"高忠仁"},{s:"閩南語文",t:"李鴻謀"},{s:"數學",t:"許育程"},{s:"英語",t:"李怡嫻"}],
+    [{s:"數學",t:"許育程"},{s:"社會",t:"江紹禔",r:"視聽教室"},{s:"英語",t:"李怡嫻"},{s:"本國語言",t:"許育程"},{s:"魔數學堂",t:"許育程"}],
+    [{s:"本國語言",t:"許育程"},{s:"本國語言",t:"許育程"},{s:"本國語言",t:"許育程"},{s:"自然科學",t:"徐筠軒",r:"自然科教室"},{s:"本國語言",t:"許育程"}],
+    [{s:"音樂",t:"黃沁琳",r:"藝文教室"},{s:"文章魔法師",t:"許育程"},{s:"─"},{s:"藝術",t:"許育程"},{s:"社會",t:"江紹禔",r:"視聽教室"}],
+    [{s:"綜合活動",t:"許育程"},{s:"文章魔法師",t:"許育程"},{s:"─"},{s:"藝術",t:"許育程"},{s:"社會",t:"江紹禔",r:"視聽教室"}],
+    [{s:"體育",t:"黃文俊"},{s:"校本綜合",t:"謝書沛"},{s:"─"},{s:"新興科技",t:"高忠仁",r:"電腦教室"},{s:"中角全能王",t:"許育程"}],
+  ],
+  "6": [
+    [{s:"數學",t:"江佩潔"},{s:"數學",t:"江佩潔"},{s:"閩南語文",t:"李鴻謀"},{s:"魔數學堂",t:"江佩潔"},{s:"社會",t:"江紹禔",r:"視聽教室"}],
+    [{s:"體育",t:"陳育瑩"},{s:"校本綜合",t:"謝書沛"},{s:"本國語言",t:"江佩潔"},{s:"體育",t:"陳育瑩"},{s:"社會",t:"江紹禔",r:"視聽教室"}],
+    [{s:"文章魔法師",t:"江佩潔"},{s:"英語",t:"江佩潔"},{s:"數學",t:"江佩潔"},{s:"健康",t:"高忠仁"},{s:"數學",t:"江佩潔"}],
+    [{s:"文章魔法師",t:"江佩潔"},{s:"社會",t:"江紹禔",r:"視聽教室"},{s:"英閱繪",t:"江佩潔"},{s:"英語",t:"江佩潔"},{s:"新興科技",t:"高忠仁",r:"電腦教室"}],
+    [{s:"中角全能王",t:"江佩潔"},{s:"─"},{s:"─"},{s:"本國語言",t:"江佩潔"},{s:"自然科學",t:"徐筠軒",r:"自然科教室"}],
+    [{s:"音樂",t:"黃沁琳",r:"藝文教室"},{s:"─"},{s:"─"},{s:"自然科學",t:"徐筠軒",r:"自然科教室"},{s:"藝術",t:"張淑吟",r:"藝文教室"}],
+    [{s:"本國語言",t:"江佩潔"},{s:"─"},{s:"─"},{s:"自然科學",t:"徐筠軒",r:"自然科教室"},{s:"藝術",t:"張淑吟",r:"藝文教室"}],
+  ]
+};
+
+const periods = [
+  { label: "第1節", time: "08:40~09:20" },
+  { label: "第2節", time: "09:30~10:10" },
+  { label: "第3節", time: "10:25~11:05" },
+  { label: "第4節", time: "11:20~12:00" },
+  { label: "第5節", time: "13:10~13:50" },
+  { label: "第6節", time: "14:00~14:40" },
+  { label: "第7節", time: "14:50~15:30" },
+];
+
+const days = ["週一","週二","週三","週四","週五"];
+
+// 根據科目名稱決定 CSS class
+function getSubjectClass(subject) {
+  const map = {
+    "本國語言":"s-語","閩南語文":"s-閩","數學":"s-數","自然科學":"s-自",
+    "社會":"s-社","藝術":"s-藝","體育":"s-體","英語":"s-英","音樂":"s-音",
+    "健康":"s-健","生活課程":"s-本","生活音樂":"s-音","英閱繪":"s-英",
+    "綜合活動":"s-綜","校本綜合":"s-校","校本生活":"s-校",
+    "中角全能王":"s-中","新興科技":"s-電","魔數學堂":"s-魔",
+    "文章魔法師":"s-文"
+  };
+  return map[subject] || "s-彈";
+}
+
+const teacherInfo = {
+  "1":  { name:"葉孟倫", title:"一年甲班導師" },
+  "2":  { name:"張淑吟", title:"二年甲班導師" },
+  "3":  { name:"楊睿芸", title:"三年甲班導師" },
+  "4":  { name:"林兪君", title:"四年甲班導師" },
+  "5":  { name:"許育程", title:"五年甲班導師" },
+  "6":  { name:"江佩潔", title:"六年甲班導師" },
+};
+
+function querySchedule() {
+  const grade = document.getElementById("gradeSelect").value;
+  const result = document.getElementById("result");
+
+  if (!grade) {
+    result.innerHTML = `<div class="no-result"><div class="icon">🌊</div><p>請先選擇年級，再點查詢喔！</p></div>`;
+    return;
+  }
+
+  const data = scheduleData[grade];
+  if (!data) {
+    result.innerHTML = `<div class="no-result"><div class="icon">🐚</div><p>查無此班級課表資料</p></div>`;
+    return;
+  }
+
+  const gradeNames = ["","一","二","三","四","五","六"];
+  const teacher = teacherInfo[grade];
+
+  let rows = "";
+  periods.forEach((p, i) => {
+    const cells = days.map((_, d) => {
+      const cell = data[i][d];
+      if (!cell || cell.s === "─" || !cell.s) return `<td><span class="empty">─</span></td>`;
+      const cls2 = getSubjectClass(cell.s);
+      const roomTag = cell.r ? `<div class="cell-room">📍${cell.r}</div>` : "";
+      const teachTag = cell.t ? `<div class="cell-teacher">👤${cell.t}</div>` : "";
+      return `<td><span class="subject ${cls2}">${cell.s}</span>${teachTag}${roomTag}</td>`;
+    }).join("");
+    rows += `<tr>
+      <td><span class="period-chip">${i+1}</span>${p.label}<br><small style="opacity:.5;font-size:11px">${p.time}</small></td>
+      ${cells}
+    </tr>`;
+  });
+
+  result.innerHTML = `
+    <div class="schedule-wrap">
+      <div class="schedule-header">
+        <div class="schedule-title">
+          <span>${gradeNames[grade]}年甲班</span> 課表
+        </div>
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+          <span class="tag">👩‍🏫 導師：${teacher.name}</span>
+          <span class="tag">📅 114學年度第1學期</span>
+        </div>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>節次</th>
+              ${days.map(d=>`<th>${d}</th>`).join("")}
+            </tr>
+          </thead>
+          <tbody>${rows}</tbody>
+        </table>
+      </div>
+    </div>`;
+}
+
+// Generate bubbles
+const bg = document.getElementById("oceanBg");
+for (let i = 0; i < 18; i++) {
+  const b = document.createElement("div");
+  b.className = "bubble";
+  const size = Math.random() * 60 + 20;
+  b.style.cssText = `
+    width:${size}px; height:${size}px;
+    left:${Math.random()*100}%;
+    animation-duration:${Math.random()*15+10}s;
+    animation-delay:-${Math.random()*20}s;
+  `;
+  bg.appendChild(b);
+}
+</script>
+</body>
+</html>
